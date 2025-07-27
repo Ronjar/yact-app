@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // ――― Output ―――
+    "noEmit": false,              // ← wichtigste Zeile!
+    "outDir": "build/server-lib",
+    "rootDir": "src/lib/server",
+
+    // ――― Code-Ziel ―――
+    "module": "ES2022",
+    "target": "ES2022",
+
+    // ――― Ballast aus ―――
+    "declaration": false,
+    "emitDecoratorMetadata": false
+  },
+  "include": ["src/lib/server/**/*.ts"]
+}
