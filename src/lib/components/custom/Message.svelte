@@ -1,17 +1,16 @@
-<script lang="ts" generics="T extends { id: string; author: string; content: string }">
-    import * as Card from "$lib/components/ui/card/index.js";
-	import { Button } from "$lib/components/ui/button/index.js";
+<script lang="ts">
+    import * as Card from "$lib/components/shadcn/card/index.js";
+	import { Button } from "$lib/components/shadcn/button/index.js";
 	import { toast } from 'svelte-sonner';
     import TrashIcon from "@lucide/svelte/icons/trash-2";
-    import type { MsgRecord } from "$lib/scripts/pb";
+    import type { Message } from "$lib/server/types";
 
-	let { message, currentUserId, onDelete }: { message: MsgRecord; currentUserId: string; onDelete?: (id: string) => void } = $props();
+	let { message, currentUserId, onDelete }: { message: Message; currentUserId: string; onDelete?: (id: string) => void } = $props();
 
-	const isSelf = $derived(message.author === currentUserId);
+	const isSelf = $derived(message.authorId === currentUserId);
 
 	function copy() {
-		// write raw HTML to clipboard
-		navigator.clipboard.writeText(message.content).then(() => toast.success('Kopiert!'));
+		navigator.clipboard.writeText(message.text).then(() => toast.success('Kopiert!'));
 	}
 
 	function handleDelete(e: MouseEvent) {
@@ -21,13 +20,13 @@
 </script>
 
 <Card.Root
-	class={`cursor-pointer group shadow-none transition-colors prose hover:border-gray-400 max-w-none ${isSelf ? 'bg-green-50 dark:bg-green-950' : 'bg-white dark:bg-slate-800'}`}
+	class={`cursor-pointer group shadow-none transition-colors prose hover:border-gray-400 max-w-none ${isSelf ? 'bg-green-500 dark:bg-green-800' : 'bg-white dark:bg-slate-800'}`}
 	onclick={copy}
 >
 	<Card.Content>
 		<div class="flex flex-row">
             <div class="flex-grow">
-			    {@html message.content}
+			    {@html message.text}
             </div>
 
 			{#if isSelf}

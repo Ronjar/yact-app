@@ -6,7 +6,7 @@ import { setAuthCookie } from '$lib/server/cookies';
 export const POST: RequestHandler = ({ cookies }) => {
 	const sessionId = uuid();
 	const adminId = uuid();
-	const sessionCode = Math.random().toString(36).slice(2, 8).toUpperCase();
+	const sessionCode = Math.random().toString(10).slice(2, 8);
 
 	sessions.set(sessionId, { id: sessionId, code: sessionCode, adminId, messages: [] });
 	users.set(adminId, { id: adminId, sessionId, isVerified: true });

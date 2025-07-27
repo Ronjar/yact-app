@@ -4,7 +4,7 @@
     import * as InputOTP from "../shadcn/input-otp";
     import Separator from "../shadcn/separator/separator.svelte";
 
-    const CODE_LENGTH = 3;
+    const CODE_LENGTH = 6;
 
     let { onJoin, onCreate}: { onJoin: (code: string) => void; onCreate: () => void } =
         $props();
@@ -34,9 +34,6 @@
             {/snippet}
         </InputOTP.Root>
         <Separator/>
-        <Button>Create a session</Button>
+        <Button onclick={onCreate}>Create a session</Button>
     </Card.Content>
-    <Card.Footer class="flex flex-col items-center text-center text-lg">
-        Scan this code with a phone registered as admin in this Sandy instance
-    </Card.Footer>
 </Card.Root>

@@ -2,12 +2,12 @@ import { Server } from 'socket.io';
 import { sessions, users } from './store.js';
 import { parseAuthCookie } from './cookies.js';
 import { v4 as uuid } from 'uuid';
-import type { Message } from './types.js';
+import type { Message, Session } from './types.js';
 import type { Server as HttpServer } from 'http';
+import type { Socket } from 'socket.io-client';
 
 let io: Server | undefined;
 
-/** Initialise (call once from hooks.server.ts) */
 export function initSocket(httpServer: HttpServer) {
 	if (io) return io;
 	io = new Server(httpServer, {
@@ -16,7 +16,6 @@ export function initSocket(httpServer: HttpServer) {
 	});
 
 	io.on('connection', (socket) => {
-		// simple cookie auth
 		const cookieHeader = socket.handshake.headers.cookie ?? '';
 		const fakeCookies = { get: (n: string) => cookieHeader.match(new RegExp(`${n}=([^;]+)`))?.[1] };
 		const auth = parseAuthCookie(fakeCookies as any);
@@ -30,36 +29,72 @@ export function initSocket(httpServer: HttpServer) {
 		const session = sessions.get(user.sessionId)!;
 		socket.join(session.id);
 
-		// send initial data
-		socket.emit('messages:init', session.messages);
-		if (!user.isVerified) socket.emit('verification:pending');
+		if (user.isVerified) {
+			socket.emit('session:init', session.code);
+			socket.emit('messages:init', session.messages);
+		} else {
+			socket.emit('verification:pending');
 
-		// ---- messaging ----
+			const admin = users.get(session.adminId);
+			if (admin?.socketId) {
+				io!.to(admin.socketId).emit('verification:request', {
+					userId: user.id,
+					sessionId: session.id
+				});
+			}
+		}
+
 		socket.on('messages:add', (text: string) => {
 			if (!user.isVerified) return;
-			const msg: Message = { id: uuid(), authorId: user.id, text, createdAt: Date.now() };
+			const msg: Message = {
+				id: uuid(),
+				authorId: user.id,
+				text,
+				createdAt: Date.now()
+			};
 			session.messages.push(msg);
 			io!.to(session.id).emit('messages:added', msg);
 		});
 
 		socket.on('messages:delete', (id: string) => {
-			const idx = session.messages.findIndex((m) => m.id === id && (m.authorId === user.id || user.id === session.adminId));
+			const idx = session.messages.findIndex(
+				(m) =>
+					m.id === id &&
+					(m.authorId === user.id || user.id === session.adminId)
+			);
 			if (idx === -1) return;
 			session.messages.splice(idx, 1);
 			io!.to(session.id).emit('messages:deleted', id);
 		});
 
-		// ---- verification ----
-		if (user.id === session.adminId) {
-			socket.on('verification:respond', ({ userId, accept }: { userId: string; accept: boolean }) => {
-				const target = users.get(userId);
-				if (!target || target.sessionId !== session.id) return;
-				target.isVerified = accept;
-				io!.to(target.socketId!).emit('verification:result', accept);
-			});
-		}
+		socket.on(
+			'verification:respond',
+			({
+				userId,
+				accept
+			}: {
+				userId: string;
+				accept: boolean;
+			}) => {
 
-		// ---- admin can trash whole session ----
+				if (user.id === session.adminId) {
+					const target = users.get(userId);
+					if (!target || target.sessionId !== session.id) return;
+
+					target.isVerified = accept;
+					io!.to(target.socketId!).emit('verification:result', accept);
+
+					if (accept) {
+						sendInit(session, target.socketId!);
+					} else {
+						io!.to(target.socketId!).emit('session:rejected');
+						io!.sockets.sockets.get(target.socketId!)?.disconnect();
+					}
+				}
+			}
+		);
+
+
 		socket.on('session:delete', () => {
 			if (user.id !== session.adminId) return;
 			io!.to(session.id).emit('session:deleted');
@@ -76,4 +111,15 @@ export function initSocket(httpServer: HttpServer) {
 	});
 
 	return io;
+}
+
+function sendInit(session: Session, target: string){
+	io!.to(target!).emit(
+		'session:init',
+		session.code
+	);
+	io!.to(target!).emit(
+		'messages:init',
+		session.messages
+	);
 }

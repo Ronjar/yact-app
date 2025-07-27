@@ -6,8 +6,8 @@ export interface Message {
 }
 
 export interface Session {
-	id: string;          // UUID
-	code: string;        // short human share-code
+	id: string;
+	code: string;
 	adminId: string;
 	messages: Message[];
 }

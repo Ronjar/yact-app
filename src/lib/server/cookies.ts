@@ -3,7 +3,6 @@ import type { Cookies } from '@sveltejs/kit';
 
 export const COOKIE = 'yact';
 
-/** writes `{userId,sessionId}` cookie */
 export function setAuthCookie(cookies: Cookies, userId: string, sessionId: string) {
 	cookies.set(
 		COOKIE,

@@ -9,7 +9,7 @@
 <ModeWatcher />
 
 <div class="flex h-14 w-full justify-between gap-2 items-center px-4 shadow-md">
-	<h1 class="text-xl font-bold">Sandy</h1>
+	<h1 class="text-xl font-bold">Yact</h1>
 	<ThemeToggle />
 </div>
 

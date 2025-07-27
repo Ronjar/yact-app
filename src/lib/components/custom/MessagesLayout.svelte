@@ -1,32 +1,27 @@
 <script lang="ts">
-    import Message from "./Message.svelte";
+    import {default as MessageCard} from "./Message.svelte";
     import SendIcon from "@lucide/svelte/icons/send";
-    import * as Card from "$lib/components/ui/card/index.js";
-    import { Button } from "$lib/components/ui/button/index.js";
-    import { Input } from "$lib/components/ui/input/index.js";
+    import * as Card from "$lib/components/shadcn/card/index.js";
+    import { Button } from "$lib/components/shadcn/button/index.js";
+    import { Input } from "$lib/components/shadcn/input/index.js";
     import { tick } from "svelte";
-    import { pb, type MsgRecord } from "$lib/scripts/pb";
+    import type { Message } from "$lib/server/types";
 
     let {
         messages = [],
         currentUserId,
-    }: { messages: MsgRecord[]; currentUserId: string } = $props();
+        onCreate,
+        onDelete
+    }: { messages: Message[]; currentUserId: string, onCreate: (text: string) => void, onDelete: (id: string) => void} = $props();
 
     let draft = $state("");
 
     async function createMessage() {
         if (!draft.trim()) return;
-        await pb
-            .collection("messages")
-            .create({ content: draft, author: currentUserId });
+        onCreate(draft);
         draft = "";
         await tick();
         document.getElementById("draft")?.focus();
-    }
-
-    async function deleteMessage(id: string) {
-        await pb.collection("messages").delete(id);
-        messages = messages.filter((m) => m.id !== id);
     }
 </script>
 
@@ -50,6 +45,6 @@
     </Card.Root>
 
     {#each [...messages].reverse() as msg (msg.id)}
-        <Message message={msg} {currentUserId} onDelete={deleteMessage} />
+        <MessageCard message={msg} {currentUserId} onDelete={onDelete} />
     {/each}
 </div>
