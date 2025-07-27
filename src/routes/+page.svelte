@@ -8,11 +8,13 @@
   import Button from "$lib/components/shadcn/button/button.svelte";
 
   import type { Message } from "$lib/server/types";
+    import { toast } from "svelte-sonner";
 
-  type Phase = "idle" | "pending" | "chat" | "rejected";
+  type Phase = "idle" | "pending" | "chat";
 
   export let data: { autoResume: { userId: string; sessionId: string } | null };
 
+  let joinOrCreate: JoinOrCreate;
   let phase: Phase = "idle";
   let sessionCode = "";
   let currentUserId = data.autoResume?.userId ?? "";
@@ -32,10 +34,11 @@
     const res = await fetch("/api/session/join", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code })
+      body: JSON.stringify({ code }),
     });
     if (!res.ok) {
-      alert("Session not found");
+      joinOrCreate.reset();
+      toast.error('Session not found!')
       return;
     }
     const data = await res.json();
@@ -47,7 +50,7 @@
     socket?.disconnect();
     socket = io({
       path: WS_PATH,
-      transports: ["websocket"]
+      transports: ["websocket"],
     });
 
     socket.on("connect", () => {
@@ -79,8 +82,14 @@
       }
     });
 
-    socket.on("verification:result", (ok: boolean) => {
-      phase = ok ? "chat" : "rejected";
+    socket.on("verification:result", (verified: boolean) => {
+      if(verified) {
+        phase = "chat";
+        toast.success("Joined session");
+      } else {
+        toast.error("Session access rejected");
+        resetEverything();
+      }
     });
 
     socket.on("session:deleted", () => {
@@ -88,16 +97,14 @@
       resetEverything();
     });
 
-    socket.on("disconnect", () => {
-        
-    });
+    socket.on("disconnect", () => {});
   }
 
   function resetEverything() {
-      phase = "idle";
-      messages = [];
-      socket?.disconnect();
-      socket = null;
+    phase = "idle";
+    messages = [];
+    socket?.disconnect();
+    socket = null;
   }
 
   function addMessage(text: string) {
@@ -117,31 +124,23 @@
 </script>
 
 {#if phase === "idle"}
-  <div class="h-screen flex items-center justify-center">
-    <JoinOrCreate onJoin={joinSession} onCreate={createSession} />
+  <div class="m-96 flex items-center justify-center">
+    <JoinOrCreate bind:this={joinOrCreate} onJoin={joinSession} onCreate={createSession} />
   </div>
 {:else if phase === "pending"}
   <div class="h-screen flex flex-col items-center justify-center gap-4">
     <Card.Root class="p-8 text-center max-w-md">
-      <Card.Header class="text-xl font-bold">Waiting for verification …</Card.Header>
+      <Card.Header class="text-xl font-bold"
+        >Waiting for verification …</Card.Header
+      >
       <Card.Content>
         {#if sessionCode}
-        <p class="mb-2">Session code: <strong>{sessionCode}</strong></p>
+          <p class="mb-2">Session code: <strong>{sessionCode}</strong></p>
         {/if}
         <p>Ask the session admin to approve your request.</p>
       </Card.Content>
       <Card.Footer>
         <Button onclick={resetEverything}>Cancel</Button>
-      </Card.Footer>
-    </Card.Root>
-  </div>
-{:else if phase === "rejected"}
-  <div class="h-screen flex flex-col items-center justify-center gap-4">
-    <Card.Root class="p-8 text-center max-w-md">
-      <Card.Header class="text-xl font-bold text-red-600">Access denied</Card.Header>
-      <Card.Content> Your join request was rejected. </Card.Content>
-      <Card.Footer>
-        <Button onclick={resetEverything}>Try again</Button>
       </Card.Footer>
     </Card.Root>
   </div>

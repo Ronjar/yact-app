@@ -6,9 +6,12 @@
 
     const CODE_LENGTH = 6;
 
-    let { onJoin, onCreate}: { onJoin: (code: string) => void; onCreate: () => void } =
-        $props();
+    let { onJoin, onCreate}: { onJoin: (code: string) => void; onCreate: () => void } = $props();
     let code = $state("");
+
+    export function reset(){
+        code = "";
+    }
 
     $effect(() => {
         if(code?.length >= CODE_LENGTH){
@@ -23,7 +26,8 @@
         class="flex flex-col text-xl text-center font-bold w-lg items-center"
         >Create or Join a session</Card.Header
     >
-    <Card.Content class="p-2 bg-white w-fit rounded-md">
+    <Card.Content class="p-2 w-fit rounded-md mx-auto">
+        <p class="opacity-60 text-sm">Enter a session's code to join</p>
         <InputOTP.Root maxlength={CODE_LENGTH} bind:value={code}>
             {#snippet children({ cells })}
                 <InputOTP.Group>
@@ -33,7 +37,7 @@
                 </InputOTP.Group>
             {/snippet}
         </InputOTP.Root>
-        <Separator/>
-        <Button onclick={onCreate}>Create a session</Button>
+        <Separator class="my-4"/>
+        <Button class="w-full" onclick={onCreate}>Create a session</Button>
     </Card.Content>
 </Card.Root>

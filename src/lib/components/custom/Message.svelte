@@ -10,7 +10,7 @@
 	const isSelf = $derived(message.authorId === currentUserId);
 
 	function copy() {
-		navigator.clipboard.writeText(message.text).then(() => toast.success('Kopiert!'));
+		navigator.clipboard.writeText(message.text).then(() => toast.success('Text copied!'));
 	}
 
 	function handleDelete(e: MouseEvent) {
