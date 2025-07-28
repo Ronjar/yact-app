@@ -20,7 +20,7 @@
 </script>
 
 <Card.Root
-	class={`cursor-pointer flex flex-row items-center h-20 group shadow-none transition-colors prose hover:border-2 bg-white dark:bg-slate-800 max-w-none ${isSelf ? 'hover:border-green-500 hover:dark:border-green-800' : 'hover:border-gray-400 '}`}
+	class={`cursor-pointer flex flex-row items-center h-20 group shadow-none transition-colors prose hover:border-2 bg-white dark:bg-slate-800 max-w-none ${isSelf ? 'hover:border-slate-600 hover:dark:border-slate-800' : 'hover:border-gray-400 '}`}
 	onclick={copy}
 >
 	<Card.Content class="w-full">

@@ -112,7 +112,7 @@ function sendInit(session: Session, user: User, isAdmin: boolean) {
 		.map(serializeUser);
 	io!.to(user.socketId!).emit('session:init', {
 		code: session.code,
-		adminId: session.adminId,
+		isAdmin: isAdmin,
 		users: userList,
 		name: user.name
 	});

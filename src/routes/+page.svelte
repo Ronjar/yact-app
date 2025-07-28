@@ -12,6 +12,7 @@
 
   import { toast } from "svelte-sonner";
   import UserOverview from "$lib/components/custom/UserOverview.svelte";
+    import VerificationPending from "$lib/components/custom/VerificationPending.svelte";
 
   type Phase = "idle" | "pending" | "chat";
 
@@ -22,7 +23,7 @@
   let sessionCode = "";
   let currentUserId = data.autoResume?.userId ?? "";
   let currentUserName = "";
-  let adminId = "";
+  let isAdmin = false;
   let messages: Message[] = [];
   let users: User[] = [];
 
@@ -34,7 +35,7 @@
     if (!res.ok) return toast.error("Cannot create session");
     const d = await res.json();
     sessionCode = d.sessionCode;
-    adminId = d.adminId;
+    isAdmin = true;
     connectSocket();
   }
 
@@ -63,10 +64,10 @@
 
     socket.on("session:init", (p) => {
       sessionCode = p.code;
-      adminId = p.adminId;
+      isAdmin = p.isAdmin;
       users = p.users;
       currentUserName = p.name;
-      sessionMeta.set({ code: sessionCode, adminId });
+      sessionMeta.set({ code: sessionCode, isAdmin: isAdmin});
     });
 
     socket.on("messages:init", (history: Message[]) => {
@@ -131,13 +132,14 @@
     socket.on("disconnect", () => {});
   }
 
-  function resetEverything() {
+  async function resetEverything() {
     phase = "idle";
     messages = [];
     socket?.disconnect();
     socket = null;
     sessionCode = "";
-    sessionMeta.set({ code: undefined, adminId: undefined });
+    sessionMeta.set({ code: undefined, isAdmin: undefined });
+    await fetch('?/resetAuth', { method: 'POST', body: new URLSearchParams() });
   }
 
   function addMessage(text: string) {
@@ -171,7 +173,7 @@
 </script>
 
 {#if phase === "idle"}
-  <div class="m-96 flex items-center justify-center">
+  <div class="mt-40 md:mt-72 flex items-center justify-center">
     <JoinOrCreate
       bind:this={joinOrCreate}
       onJoin={joinSession}
@@ -179,25 +181,14 @@
     />
   </div>
 {:else if phase === "pending"}
-  <div class="h-screen flex flex-col items-center justify-center gap-4">
-    <Card.Root class="p-8 text-center max-w-md">
-      <Card.Header class="text-xl font-bold"
-        >Waiting for verification …</Card.Header
-      >
-      <Card.Content>
-        {#if sessionCode}
-          <p class="mb-2">Session code: <strong>{sessionCode}</strong></p>
-        {/if}
-        <p>Ask the session admin to approve your request.</p>
-      </Card.Content>
-      <Card.Footer>
-        <Button onclick={resetEverything}>Cancel</Button>
-      </Card.Footer>
-    </Card.Root>
+  <div class="mt-40 md:mt-72 flex items-center justify-center">
+    <VerificationPending
+    onCancel={resetEverything}
+    />
   </div>
 {:else}
-  <div class="flex flex-1 h-full">
-    <div class="flex-1 overflow-auto p-4">
+  <div class="flex flex-col md:flex-row h-full">
+    <div class="flex-5/6 overflow-auto p-4">
       <MessagesLayout
         {messages}
         {currentUserId}
@@ -206,10 +197,11 @@
       />
     </div>
 
-    <div class="p-4">
-    {#if currentUserId === adminId}
+    <div class="flex-1/6 p-4">
+    {#if isAdmin}
       <SessionOverview
-        {users}
+        name={currentUserName}
+        users={users}
         onAccept={accept}
         onReject={reject}
         onRemove={remove}
