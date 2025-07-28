@@ -10,10 +10,11 @@ COPY . .
 RUN npm run build
 
 # ----------  runtime stage ----------
-FROM node:18-alpine
+FROM node:24-alpine
 WORKDIR /app
 ENV NODE_ENV=production
 
+COPY --from=build /app/package*.json ./ 
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/build ./build
 COPY server ./server

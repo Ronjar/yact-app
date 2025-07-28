@@ -1,8 +1,6 @@
-version: "3.8"
-
 services:
   yact:
-    image: ghcr.io/Ronjar/yact:latest
+    image: ghcr.io/Ronjar/yact-app:latest
     restart: unless-stopped
     ports:
       - "3000:3000"
