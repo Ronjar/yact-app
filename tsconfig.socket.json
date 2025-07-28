@@ -14,5 +14,5 @@
     "declaration": false,
     "emitDecoratorMetadata": false
   },
-  "include": ["src/lib/server/**/*.ts"]
+  "include": ["src/lib/server/**/*.ts", ".svelte-kit/ambient.d.ts"]
 }
