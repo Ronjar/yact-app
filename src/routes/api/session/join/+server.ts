@@ -2,6 +2,7 @@ import { json, error, type RequestHandler } from '@sveltejs/kit';
 import { v4 as uuid } from 'uuid';
 import { sessions, users, getSessionByCode } from '$lib/server/store';
 import { setAuthCookie } from '$lib/server/cookies';
+import { randomName } from '$lib/server/randomName';
 
 export const POST: RequestHandler = async ({ request, cookies }) => {
 	const { code } = await request.json() as { code: string };
@@ -9,7 +10,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 	if (!session) throw error(404, 'Session not found');
 
 	const userId = uuid();
-	users.set(userId, { id: userId, sessionId: session.id, isVerified: false });
+	users.set(userId, { id: userId, name: randomName(), sessionId: session.id, isVerified: false });
 	setAuthCookie(cookies, userId, session.id);
 
 	return json({ sessionId: session.id, userId, adminId: session.adminId });

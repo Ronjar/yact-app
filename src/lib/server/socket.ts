@@ -2,9 +2,8 @@ import { Server } from 'socket.io';
 import { sessions, users } from './store.js';
 import { parseAuthCookie } from './cookies.js';
 import { v4 as uuid } from 'uuid';
-import type { Message, Session } from './types.js';
+import type { Message, Session, User } from './types.js';
 import type { Server as HttpServer } from 'http';
-import type { Socket } from 'socket.io-client';
 
 let io: Server | undefined;
 
@@ -30,17 +29,13 @@ export function initSocket(httpServer: HttpServer) {
 		socket.join(session.id);
 
 		if (user.isVerified) {
-			socket.emit('session:init', session.code);
-			socket.emit('messages:init', session.messages);
+			sendInit(session, user, user.id === session.adminId);
 		} else {
 			socket.emit('verification:pending');
 
 			const admin = users.get(session.adminId);
 			if (admin?.socketId) {
-				io!.to(admin.socketId).emit('verification:request', {
-					userId: user.id,
-					sessionId: session.id
-				});
+				io!.to(admin.socketId).emit('verification:request', serializeUser(user));
 			}
 		}
 
@@ -67,42 +62,40 @@ export function initSocket(httpServer: HttpServer) {
 			io!.to(session.id).emit('messages:deleted', id);
 		});
 
-		socket.on(
-			'verification:respond',
-			({
-				userId,
-				accept
-			}: {
-				userId: string;
-				accept: boolean;
-			}) => {
+		socket.on('verification:respond', ({ userId, accept }: { userId: string; accept: boolean }) => {
+			if (user.id !== session.adminId) return;
+			const target = users.get(userId);
+			if (!target || target.sessionId !== session.id) return;
 
-				if (user.id === session.adminId) {
-					const target = users.get(userId);
-					if (!target || target.sessionId !== session.id) return;
+			target.isVerified = accept;
 
-					target.isVerified = accept;
-					io!.to(target.socketId!).emit('verification:result', accept);
-
-					if (accept) {
-						sendInit(session, target.socketId!);
-					} else {
-						io!.to(target.socketId!).emit('session:rejected');
-						io!.sockets.sockets.get(target.socketId!)?.disconnect();
-					}
-				}
+			if (accept) {
+				sendInit(session, target, false);
+				io!.to(session.id).emit('user:updated', serializeUser(target));
+			} else {
+				io!.to(target.socketId!).emit('verification:result', false);
+				io!.to(session.id).emit('user:removed', { userId: target.id });
+				io!.sockets.sockets.get(target.socketId!)?.disconnect();
+				users.delete(target.id);
 			}
-		);
-
+		});
 
 		socket.on('session:delete', () => {
 			if (user.id !== session.adminId) return;
 			io!.to(session.id).emit('session:deleted');
 			io!.in(session.id).socketsLeave(session.id);
-			session.messages.length = 0;
 			sessions.delete(session.id);
 			for (const u of users.values())
 				if (u.sessionId === session.id) users.delete(u.id);
+		});
+
+		socket.on('user:delete', (userId: string) => {
+			let userToBeDeleted = users.get(userId);
+			if (user.id === session.adminId || user.id === userId) {
+				io!.to(session.id).emit('user:removed', { userId: userId });
+				io!.sockets.sockets.get(users.get(userId)?.socketId!)?.disconnect();
+				users.delete(userId);
+			}
 		});
 
 		socket.on('disconnect', () => {
@@ -113,13 +106,20 @@ export function initSocket(httpServer: HttpServer) {
 	return io;
 }
 
-function sendInit(session: Session, target: string){
-	io!.to(target!).emit(
-		'session:init',
-		session.code
-	);
-	io!.to(target!).emit(
-		'messages:init',
-		session.messages
-	);
+function sendInit(session: Session, user: User, isAdmin: boolean) {
+	const userList = [...users.values()]
+		.filter((u) => u.sessionId === session.id)
+		.map(serializeUser);
+	io!.to(user.socketId!).emit('session:init', {
+		code: session.code,
+		adminId: session.adminId,
+		users: userList,
+		name: user.name
+	});
+	io!.to(user.socketId!).emit('messages:init', session.messages);
+	if (!isAdmin) io!.to(user.socketId!).emit('verification:result', true);
+}
+
+function serializeUser(u: User) {
+	return { id: u.id, name: u.name, isVerified: u.isVerified };
 }

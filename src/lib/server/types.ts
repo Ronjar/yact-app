@@ -14,6 +14,7 @@ export interface Session {
 
 export interface User {
 	id: string;
+	name: string; 
 	sessionId: string;
 	isVerified: boolean;
 	socketId?: string;

@@ -44,6 +44,7 @@
 		"socket.io-client": "^4.8.1",
 		"svelte-preprocess": "^6.0.3",
 		"svelte-qrcode": "^1.0.1",
+		"unique-names-generator": "^4.7.1",
 		"uuid": "^11.1.0"
 	}
 }
