@@ -1,12 +1,13 @@
 # ----------  build stage ----------
-FROM node:18-alpine AS build
+FROM node:24-alpine AS build
 WORKDIR /app
 
-COPY package*.json .
+COPY package*.json ./
+COPY svelte.config.* vite.config.* tsconfig.* ./
 RUN npm ci
 
 COPY . .
-RUN npm run build         # vite build + tsc socket
+RUN npm run build
 
 # ----------  runtime stage ----------
 FROM node:18-alpine

@@ -71,9 +71,3 @@
             </Button>
     </div>
 </aside>
-
-<style>
-    aside button:hover {
-        opacity: 0.8;
-    }
-</style>
