@@ -1,8 +1,8 @@
 import { uniqueNamesGenerator, adjectives, animals } from 'unique-names-generator';
-import { users, sessions} from './store';
-import { env } from '$env/dynamic/public';
+import { users, sessions, shares} from './store';
 
-const CODE_LENGTH = parseInt(env.PUBLIC_SESSION_CODE_LENGTH?? "6");
+const SESSION_CODE_LENGTH = parseInt(process.env.PUBLIC_SESSION_CODE_LENGTH?? "6");
+const SHARE_CODE_LENGTH = parseInt(process.env.PUBLIC_SHARE_CODE_LENGTH?? "6");
 
 export function randomName(): string {
 	let name: string;
@@ -16,10 +16,18 @@ export function randomName(): string {
 	return name;
 }
 
-export function randomCode(): string {
+export function randomSessionCode(): string {
 	let code: string;
 	do {
-		code = Math.random().toString(10).slice(2, 2 + CODE_LENGTH);
+		code = Math.random().toString(10).slice(2, 2 + SESSION_CODE_LENGTH);
 	} while ([...sessions.values()].some((s) => s.code === code));
+	return code;
+}
+
+export function randomShareCode(): string {
+		let code: string;
+	do {
+		code = Math.random().toString(10).slice(2, 2 + SHARE_CODE_LENGTH);
+	} while ([...shares.keys()].some((s) => s === code));
 	return code;
 }

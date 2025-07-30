@@ -1,6 +1,6 @@
 import { json, error, type RequestHandler } from '@sveltejs/kit';
 import { v4 as uuid } from 'uuid';
-import { sessions, users, getSessionByCode } from '$lib/server/store';
+import { users, getSessionByCode } from '$lib/server/store';
 import { setAuthCookie } from '$lib/server/cookies';
 import { randomName } from '$lib/server/randomAssetGenerator';
 

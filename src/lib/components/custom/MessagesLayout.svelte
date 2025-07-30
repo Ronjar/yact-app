@@ -11,8 +11,9 @@
         messages = [],
         currentUserId,
         onCreate,
-        onDelete
-    }: { messages: Message[]; currentUserId: string, onCreate: (text: string) => void, onDelete: (id: string) => void} = $props();
+        onDelete,
+        onShare
+    }: { messages: Message[]; currentUserId: string, onCreate: (text: string) => void, onDelete: (id: string) => void, onShare: (text: string) => void} = $props();
 
     let draft = $state("");
 
@@ -45,6 +46,6 @@
     </Card.Root>
 
     {#each [...messages].reverse() as msg (msg.id)}
-        <MessageCard message={msg} {currentUserId} onDelete={onDelete} />
+        <MessageCard message={msg} {currentUserId} onDelete={onDelete} onShare={onShare} />
     {/each}
 </div>

@@ -1,11 +1,16 @@
 import { Server } from 'socket.io';
-import { sessions, users } from './store.js';
+import { sessions, users, shares } from './store.js';
 import { parseAuthCookie } from './cookies.js';
 import { v4 as uuid } from 'uuid';
 import type { Message, Session, User } from './types.js';
 import type { Server as HttpServer } from 'http';
+import { randomShareCode } from './randomAssetGenerator.js';
 
 let io: Server | undefined;
+
+const EXPIRY_MS = parseInt(process.env.PUBLIC_EXPIRY_TIMER_SECONDS?? "6") * 1000;
+const cleanupTimers = new Map<string, NodeJS.Timeout>();
+
 
 export function initSocket(httpServer: HttpServer) {
 	if (io) return io;
@@ -27,6 +32,11 @@ export function initSocket(httpServer: HttpServer) {
 		user.socketId = socket.id;
 		const session = sessions.get(user.sessionId)!;
 		socket.join(session.id);
+
+		if (cleanupTimers.has(session.id)) {
+			clearTimeout(cleanupTimers.get(session.id)!);
+			cleanupTimers.delete(session.id);
+		}
 
 		if (user.isVerified) {
 			sendInit(session, user, user.id === session.adminId);
@@ -60,6 +70,17 @@ export function initSocket(httpServer: HttpServer) {
 			if (idx === -1) return;
 			session.messages.splice(idx, 1);
 			io!.to(session.id).emit('messages:deleted', id);
+		});
+
+		socket.on('share:create', (payload: { text: string }, cb?: (url: string) => void) => {
+			if (!user.isVerified) return;
+
+			const code = randomShareCode();
+			shares.set(code, payload.text);
+
+			const url = `${socket.handshake.headers.origin ?? ''}/s/${code}`;
+			cb?.(url);
+			socket.emit('share:created', { code, url });
 		});
 
 		socket.on('verification:respond', ({ userId, accept }: { userId: string; accept: boolean }) => {
@@ -100,6 +121,20 @@ export function initSocket(httpServer: HttpServer) {
 
 		socket.on('disconnect', () => {
 			user.socketId = undefined;
+
+			if (!io!.sockets.adapter.rooms.get(session.id)) {
+				const t = setTimeout(() => {
+					if (!io!.sockets.adapter.rooms.get(session.id)) {
+						io!.to(session.id).emit('session:deleted');
+						sessions.delete(session.id);
+						for (const u of users.values())
+							if (u.sessionId === session.id) users.delete(u.id);
+					}
+					cleanupTimers.delete(session.id);
+				}, EXPIRY_MS);
+
+				cleanupTimers.set(session.id, t);
+			}
 		});
 	});
 

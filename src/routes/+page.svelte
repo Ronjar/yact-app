@@ -4,8 +4,6 @@
   import JoinOrCreate from "$lib/components/custom/JoinOrCreate.svelte";
   import MessagesLayout from "$lib/components/custom/MessagesLayout.svelte";
   import SessionOverview from "$lib/components/custom/SessionOverview.svelte";
-  import * as Card from "$lib/components/shadcn/card/index.js";
-  import Button from "$lib/components/shadcn/button/button.svelte";
   import { sessionMeta } from "$lib/stores/session";
 
   import type { Message, User } from "$lib/server/types";
@@ -149,13 +147,20 @@
     socket?.emit("messages:delete", id);
   }
 
-  function accept(id: string) {
+  function shareMessage(text: string) {
+    socket?.emit('share:create', { text: text }, (url: string) => {
+    navigator.clipboard.writeText(url);
+    toast.success('Link copied!');
+  });
+}
+
+  function acceptUser(id: string) {
     socket?.emit("verification:respond", { userId: id, accept: true });
   }
-  function reject(id: string) {
+  function rejectUser(id: string) {
     socket?.emit("verification:respond", { userId: id, accept: false });
   }
-  function remove(id: string) {
+  function removeUser(id: string) {
     socket?.emit("user:delete", id);
   }
 
@@ -194,6 +199,7 @@
         {currentUserId}
         onCreate={addMessage}
         onDelete={deleteMessage}
+        onShare={shareMessage}
       />
     </div>
 
@@ -202,15 +208,15 @@
       <SessionOverview
         name={currentUserName}
         users={users}
-        onAccept={accept}
-        onReject={reject}
-        onRemove={remove}
+        onAccept={acceptUser}
+        onReject={rejectUser}
+        onRemove={removeUser}
         onDeleteSession={deleteSession}
       />
     {:else}
       <UserOverview
         name={currentUserName}
-        onDelete={() => remove(currentUserId)}
+        onDelete={() => removeUser(currentUserId)}
       />
     {/if}
     </div>
