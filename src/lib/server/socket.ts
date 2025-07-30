@@ -8,7 +8,7 @@ import { randomShareCode } from './randomAssetGenerator.js';
 
 let io: Server | undefined;
 
-const EXPIRY_MS = parseInt(process.env.PUBLIC_EXPIRY_TIMER_SECONDS?? "6") * 1000;
+const EXPIRY_MS = parseInt(process.env.PUBLIC_EXPIRY_TIMER_SECONDS?? "0") * 1000;
 const cleanupTimers = new Map<string, NodeJS.Timeout>();
 
 
@@ -122,7 +122,7 @@ export function initSocket(httpServer: HttpServer) {
 		socket.on('disconnect', () => {
 			user.socketId = undefined;
 
-			if (!io!.sockets.adapter.rooms.get(session.id)) {
+			if (EXPIRY_MS != 0 && !io!.sockets.adapter.rooms.get(session.id)) {
 				const t = setTimeout(() => {
 					if (!io!.sockets.adapter.rooms.get(session.id)) {
 						io!.to(session.id).emit('session:deleted');
