@@ -1,5 +1,4 @@
-import { json } from '@sveltejs/kit';
-import { randomName } from './randomAssetGenerator';
+import { randomName } from './randomAssetGenerator.js';
 import type { Session, User } from './types';
 import { v4 as uuid } from 'uuid';
 

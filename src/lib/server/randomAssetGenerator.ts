@@ -1,5 +1,5 @@
 import { uniqueNamesGenerator, adjectives, animals } from 'unique-names-generator';
-import { users, sessions, shares} from './store';
+import { users, sessions, shares} from './store.js';
 
 const SESSION_CODE_LENGTH = parseInt(process.env.PUBLIC_SESSION_CODE_LENGTH?? "6");
 const SHARE_CODE_LENGTH = parseInt(process.env.PUBLIC_SHARE_CODE_LENGTH?? "6");
