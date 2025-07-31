@@ -17,16 +17,21 @@
         open = false;
     }
 
-    function closeDialogButton() {
+    function closeAndDelete() {
         open = false;
         onCloseEvent?.();
     }
 </script>
 
 <Dialog.Root bind:open>
-    <Dialog.Content class="p-8 bg-white w-fit rounded-md" onInteractOutside={closeDialogButton}>
-        <p class="text-lg mb-8">Scan to join the session</p>
-        <QrCode value={link} size="500" />
-        <Button class="w-full mt-10" variant="destructive" onclick={closeDialogButton}>Close and delete invite</Button>
+    <Dialog.Content class="p-8 w-fit rounded-md" onInteractOutside={closeDialog} showCloseButton={false}>
+        <p class="text-xl font-bold mb-4">Scan to join the session</p>
+        <div class="p-2 sm:p-8 rounded-xl bg-white">
+            <QrCode value={link} size="500" />
+        </div>
+        <div class="flex flex-row gap-4 mt-8">
+        <Button class="flex-1/2 md:text-xl md:h-12" onclick={closeDialog}>Close</Button>
+        <Button class="flex-1/2 md:text-xl md:h-12" variant="destructive" onclick={closeAndDelete}>Close and delete invite</Button>
+        </div>
     </Dialog.Content>
 </Dialog.Root>

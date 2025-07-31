@@ -4,11 +4,12 @@ import { parseAuthCookie } from './cookies.js';
 import { v4 as uuid } from 'uuid';
 import type { Message, Session, User } from './types.js';
 import type { Server as HttpServer } from 'http';
-import { randomShareCode } from './randomAssetGenerator.js';
+import { randomInviteToken, randomShareCode } from './randomAssetGenerator.js';
 
 let io: Server | undefined;
 
 const EXPIRY_MS = parseInt(process.env.PUBLIC_EXPIRY_TIMER_SECONDS ?? "0") * 1000;
+const BASE_URL = process.env.PUBLIC_BASE_URL;
 const cleanupTimers = new Map<string, NodeJS.Timeout>();
 
 
@@ -112,10 +113,10 @@ export function initSocket(httpServer: HttpServer) {
 		socket.on('invite:create', (ack?: (token: string, url: string) => void) => {
 			if (user.id !== session.adminId) return;
 
-			const token = uuid().replace(/-/g, '').slice(0, 24);
+			const token = randomInviteToken();
 			invites.set(token, session.id);
 
-			const url = `${socket.handshake.headers.origin ?? ''}/i/${token}`;
+			const url = `${BASE_URL?? socket.handshake.headers.origin ?? ''}/i/${token}`;
 
 			ack?.(token, url);
 		});
@@ -138,7 +139,6 @@ export function initSocket(httpServer: HttpServer) {
 		});
 
 		socket.on('user:delete', (userId: string) => {
-			let userToBeDeleted = users.get(userId);
 			if (user.id === session.adminId || user.id === userId) {
 				io!.to(session.id).emit('user:removed', { userId: userId });
 				io!.sockets.sockets.get(users.get(userId)?.socketId!)?.disconnect();
