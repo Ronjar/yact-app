@@ -40,7 +40,7 @@
                         e.key === "Enter" &&
                         (e.preventDefault(), createMessage())}
                 />
-                <Button type="submit" onclick={createMessage}><SendIcon/></Button>
+                <Button type="submit" class="cursor-pointer" onclick={createMessage}><SendIcon/></Button>
             </form>
         </Card.Content>
     </Card.Root>

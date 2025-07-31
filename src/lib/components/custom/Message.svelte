@@ -60,11 +60,11 @@
 					</DropdownMenu.Trigger>
 					<DropdownMenu.Content class="w-56" align="start">
 						<DropdownMenu.Group>
-							<DropdownMenu.Item class="flex flex-row" onclick={handleShare}>
+							<DropdownMenu.Item class="flex flex-row cursor-pointer" onclick={handleShare}>
 								<ShareIcon/>
 								Share
 							</DropdownMenu.Item>
-							<DropdownMenu.Item class="flex flex-row" variant="destructive" onclick={handleDelete}>
+							<DropdownMenu.Item class="flex flex-row cursor-pointer" variant="destructive" onclick={handleDelete}>
 								<TrashIcon />
 								Delete
 							</DropdownMenu.Item>

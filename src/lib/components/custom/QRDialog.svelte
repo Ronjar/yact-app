@@ -30,8 +30,8 @@
             <QrCode value={link} size="500" />
         </div>
         <div class="flex flex-row gap-4 mt-8">
-        <Button class="flex-1/2 md:text-xl md:h-12" onclick={closeDialog}>Close</Button>
-        <Button class="flex-1/2 md:text-xl md:h-12" variant="destructive" onclick={closeAndDelete}>Close and delete invite</Button>
+        <Button class="flex-1/2 md:text-xl md:h-12 cursor-pointer" onclick={closeDialog}>Close</Button>
+        <Button class="flex-1/2 md:text-xl md:h-12 cursor-pointer" variant="destructive" onclick={closeAndDelete}>Close and delete invite</Button>
         </div>
     </Dialog.Content>
 </Dialog.Root>

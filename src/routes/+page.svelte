@@ -148,7 +148,7 @@
   }
 
   function shareMessage(text: string) {
-    socket?.emit("share:create", { text: text }, (url: string) => {
+    socket?.emit("share:create", text , (url: string) => {
       navigator.clipboard.writeText(url);
       toast.success("Link copied!");
     });
@@ -198,6 +198,11 @@
     return () => socket?.disconnect();
   });
 </script>
+
+<svelte:head>
+	<title>YACT</title>
+	<meta name="description" content="YACT (yet another clipboard tool) creates a simple, browser based board to share data between devices in the same session" />
+</svelte:head>
 
 {#if phase === "idle"}
   <div class="mt-40 md:mt-72 flex items-center justify-center">

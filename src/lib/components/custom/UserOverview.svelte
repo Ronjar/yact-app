@@ -18,7 +18,7 @@
     </Card.Header>
     <Card.Content>
         <Button
-            class="w-full flex flex-row items-center"
+            class="w-full flex flex-row items-center cursor-pointer"
             variant="destructive"
             onclick={onDelete}
         >
