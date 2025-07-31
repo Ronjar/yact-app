@@ -1,10 +1,10 @@
 import { Server } from 'socket.io';
-import { sessions, users, shares, invites } from './store.js';
+import { sessions, users, shares, invites, createNewShare, createNewInvite } from './store.js';
 import { parseAuthCookie } from './cookies.js';
 import { v4 as uuid } from 'uuid';
 import type { Message, Session, User } from './types.js';
 import type { Server as HttpServer } from 'http';
-import { randomInviteToken, randomShareCode } from './randomAssetGenerator.js';
+import 'dotenv/config';
 
 let io: Server | undefined;
 
@@ -81,15 +81,13 @@ export function initSocket(httpServer: HttpServer) {
 			io!.to(session.id).emit('messages:deleted', id);
 		});
 
-		socket.on('share:create', (payload: { text: string }, cb?: (url: string) => void) => {
+		socket.on('share:create', (text: string, ack?: (url: string) => void) => {
 			if (!user.isVerified) return;
 
-			const code = randomShareCode();
-			shares.set(code, payload.text);
+			const code = createNewShare(text);
 
-			const url = `${socket.handshake.headers.origin ?? ''}/s/${code}`;
-			cb?.(url);
-			socket.emit('share:created', { code, url });
+			const url = `${BASE_URL ?? socket.handshake.headers.origin ?? ''}/s/${code}`;
+			ack?.(url);
 		});
 
 		socket.on('verification:respond', ({ userId, accept }: { userId: string; accept: boolean }) => {
@@ -113,10 +111,9 @@ export function initSocket(httpServer: HttpServer) {
 		socket.on('invite:create', (ack?: (token: string, url: string) => void) => {
 			if (user.id !== session.adminId) return;
 
-			const token = randomInviteToken();
-			invites.set(token, session.id);
+			const token = createNewInvite(session.id);
 
-			const url = `${BASE_URL?? socket.handshake.headers.origin ?? ''}/i/${token}`;
+			const url = `${BASE_URL ?? socket.handshake.headers.origin ?? ''}/i/${token}`;
 
 			ack?.(token, url);
 		});
@@ -173,6 +170,7 @@ function sendInit(session: Session, user: User, isAdmin: boolean) {
 		.filter((u) => u.sessionId === session.id)
 		.map(serializeUser);
 	io!.to(user.socketId!).emit('session:init', {
+		userId: user.id,
 		code: session.code,
 		isAdmin: isAdmin,
 		users: userList,

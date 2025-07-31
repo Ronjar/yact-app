@@ -10,8 +10,8 @@
 
   import { toast } from "svelte-sonner";
   import UserOverview from "$lib/components/custom/UserOverview.svelte";
-    import VerificationPending from "$lib/components/custom/VerificationPending.svelte";
-    import QrDialog from "$lib/components/custom/QRDialog.svelte";
+  import VerificationPending from "$lib/components/custom/VerificationPending.svelte";
+  import QrDialog from "$lib/components/custom/QRDialog.svelte";
 
   type Phase = "idle" | "pending" | "chat";
 
@@ -34,10 +34,12 @@
   async function createSession() {
     const res = await fetch("/api/session/create", { method: "POST" });
     if (!res.ok) return toast.error("Cannot create session");
-    const d = await res.json();
-    sessionCode = d.sessionCode;
-    isAdmin = true;
-    connectSocket();
+    if (res.ok) {
+      connectSocket();
+    } else {
+      joinOrCreate.reset();
+      toast.error("Failed to create session");
+    }
   }
 
   async function joinSession(code: string) {
@@ -68,7 +70,8 @@
       isAdmin = p.isAdmin;
       users = p.users;
       currentUserName = p.name;
-      sessionMeta.set({ code: sessionCode, isAdmin: isAdmin});
+      currentUserId = p.userId;
+      sessionMeta.set({ code: sessionCode, isAdmin: isAdmin });
     });
 
     socket.on("messages:init", (history: Message[]) => {
@@ -89,14 +92,6 @@
     socket.on("verification:pending", () => {
       phase = "pending";
     });
-    /*
-    socket.on("verification:request", ({ userId }) => {
-      if (confirm(`Allow user ${userId} to join?`)) {
-        socket!.emit("verification:respond", { userId, accept: true });
-      } else {
-        socket!.emit("verification:respond", { userId, accept: false });
-      }
-    });*/
 
     socket.on("verification:result", (verified: boolean) => {
       if (verified) {
@@ -119,16 +114,13 @@
       (u) => (users = users.map((x) => (x.id === u.id ? u : x))),
     );
 
-    socket.on(
-      "user:removed",
-      ({ userId }) => {
-        if(currentUserId == userId) {
-          resetEverything();
-        } else {
-        (users = users.filter((u) => u.id !== userId));
-        }
-      },
-    );
+    socket.on("user:removed", ({ userId }) => {
+      if (currentUserId == userId) {
+        resetEverything();
+      } else {
+        users = users.filter((u) => u.id !== userId);
+      }
+    });
 
     socket.on("session:deleted", () => {
       toast.error("Session closed");
@@ -145,7 +137,7 @@
     socket = null;
     sessionCode = "";
     sessionMeta.set({ code: undefined, isAdmin: undefined });
-    await fetch('?/resetAuth', { method: 'POST', body: new URLSearchParams() });
+    await fetch("?/resetAuth", { method: "POST", body: new URLSearchParams() });
   }
 
   function addMessage(text: string) {
@@ -156,11 +148,11 @@
   }
 
   function shareMessage(text: string) {
-    socket?.emit('share:create', { text: text }, (url: string) => {
-    navigator.clipboard.writeText(url);
-    toast.success('Link copied!');
-  });
-}
+    socket?.emit("share:create", { text: text }, (url: string) => {
+      navigator.clipboard.writeText(url);
+      toast.success("Link copied!");
+    });
+  }
 
   function acceptUser(id: string) {
     socket?.emit("verification:respond", { userId: id, accept: true });
@@ -178,7 +170,6 @@
         qrDialog.openDialog(url, () => {
           deleteInvite(token);
         });
-        
       } else {
         toast.error("Failed to create invite");
       }
@@ -218,9 +209,7 @@
   </div>
 {:else if phase === "pending"}
   <div class="mt-40 md:mt-72 flex items-center justify-center">
-    <VerificationPending
-    onCancel={resetEverything}
-    />
+    <VerificationPending onCancel={resetEverything} />
   </div>
 {:else}
   <div class="flex flex-col md:flex-row h-full">
@@ -235,23 +224,23 @@
     </div>
 
     <div class="flex-1/6 p-4">
-    {#if isAdmin}
-      <SessionOverview
-        name={currentUserName}
-        users={users}
-        onAccept={acceptUser}
-        onReject={rejectUser}
-        onRemove={removeUser}
-        onCreateInvite={inviteUser}
-        onDeleteSession={deleteSession}
-      />
-      <QrDialog bind:this={qrDialog} />
-    {:else}
-      <UserOverview
-        name={currentUserName}
-        onDelete={() => removeUser(currentUserId)}
-      />
-    {/if}
+      {#if isAdmin}
+        <SessionOverview
+          name={currentUserName}
+          {users}
+          onAccept={acceptUser}
+          onReject={rejectUser}
+          onRemove={removeUser}
+          onCreateInvite={inviteUser}
+          onDeleteSession={deleteSession}
+        />
+        <QrDialog bind:this={qrDialog} />
+      {:else}
+        <UserOverview
+          name={currentUserName}
+          onDelete={() => removeUser(currentUserId)}
+        />
+      {/if}
     </div>
   </div>
 {/if}
