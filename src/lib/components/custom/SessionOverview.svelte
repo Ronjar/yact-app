@@ -1,10 +1,12 @@
 <script lang="ts">
     import Check from "@lucide/svelte/icons/check";
     import X from "@lucide/svelte/icons/x";
-    import Trash from "@lucide/svelte/icons/trash";
+    import TrashIcon from "@lucide/svelte/icons/trash";
+    import PlusIcon from "@lucide/svelte/icons/plus";
     import Separator from "../shadcn/separator/separator.svelte";
     import Button from "../shadcn/button/button.svelte";
     import * as Card from "$lib/components/shadcn/card/index.js";
+    import * as Dialog from "$lib/components/shadcn/dialog/index.js";
 
     export interface User {
         id: string;
@@ -18,11 +20,19 @@
         onAccept: (id: string) => void;
         onReject: (id: string) => void;
         onRemove: (id: string) => void;
+        onCreateInvite: () => void;
         onDeleteSession: () => void;
     }
 
-    let { name, users, onAccept, onReject, onRemove, onDeleteSession }: Props =
-        $props();
+    let {
+        name,
+        users,
+        onAccept,
+        onReject,
+        onRemove,
+        onCreateInvite,
+        onDeleteSession,
+    }: Props = $props();
 </script>
 
 <Card.Root class="md:h-[90vh] flex flex-col gap-4">
@@ -67,7 +77,8 @@
                                     class="size-10 opacity-0 group-hover:opacity-100 cursor-pointer"
                                     variant="destructive"
                                     onclick={() => onRemove(u.id)}
-                                    title="remove"><Trash size="18" /></Button
+                                    title="remove"
+                                    ><TrashIcon size="18" /></Button
                                 >
                             {/if}
                         </div>
@@ -75,18 +86,27 @@
                     {/if}
                 {/each}
                 {#if users.length < 2}
-                <p class="opacity-75">No other users yet</p>
+                    <p class="opacity-75">No other users yet</p>
                 {/if}
             </div>
         </div>
     </Card.Content>
-    <Card.Footer>
-            <Button
-                class="w-full cursor-pointer md:text-xl md:h-12"
-                variant="destructive"
-                onclick={onDeleteSession}
-            >
-                Delete Session
-            </Button>
+    <Card.Footer class="flex flex-col gap-4">
+        <Button
+            class="w-full cursor-pointer md:text-xl md:h-12 flex flex-row items-center justify-center gap-2"
+            onclick={onCreateInvite}
+        >
+            <PlusIcon />
+            Invite User
+        </Button>
+        <Separator />
+        <Button
+            class="w-full cursor-pointer md:text-xl md:h-12 flex flex-row items-center justify-center gap-2"
+            variant="destructive"
+            onclick={onDeleteSession}
+        >
+            <TrashIcon />
+            Delete Session
+        </Button>
     </Card.Footer>
 </Card.Root>

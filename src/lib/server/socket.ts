@@ -1,5 +1,5 @@
 import { Server } from 'socket.io';
-import { sessions, users, shares } from './store.js';
+import { sessions, users, shares, invites } from './store.js';
 import { parseAuthCookie } from './cookies.js';
 import { v4 as uuid } from 'uuid';
 import type { Message, Session, User } from './types.js';
@@ -8,7 +8,7 @@ import { randomShareCode } from './randomAssetGenerator.js';
 
 let io: Server | undefined;
 
-const EXPIRY_MS = parseInt(process.env.PUBLIC_EXPIRY_TIMER_SECONDS?? "0") * 1000;
+const EXPIRY_MS = parseInt(process.env.PUBLIC_EXPIRY_TIMER_SECONDS ?? "0") * 1000;
 const cleanupTimers = new Map<string, NodeJS.Timeout>();
 
 
@@ -29,8 +29,16 @@ export function initSocket(httpServer: HttpServer) {
 		const user = users.get(auth.userId);
 		if (!user || user.sessionId !== auth.sessionId) return socket.disconnect();
 
-		user.socketId = socket.id;
 		const session = sessions.get(user.sessionId)!;
+
+		if (user.socketId === "From invite") {
+			const admin = users.get(session.adminId);
+			if (admin?.socketId) {
+				io!.to(admin.socketId).emit('user:added', serializeUser(user));
+			}
+		}
+
+		user.socketId = socket.id;
 		socket.join(session.id);
 
 		if (cleanupTimers.has(session.id)) {
@@ -99,6 +107,25 @@ export function initSocket(httpServer: HttpServer) {
 				io!.sockets.sockets.get(target.socketId!)?.disconnect();
 				users.delete(target.id);
 			}
+		});
+
+		socket.on('invite:create', (ack?: (token: string, url: string) => void) => {
+			if (user.id !== session.adminId) return;
+
+			const token = uuid().replace(/-/g, '').slice(0, 24);
+			invites.set(token, session.id);
+
+			const url = `${socket.handshake.headers.origin ?? ''}/i/${token}`;
+
+			ack?.(token, url);
+		});
+
+		socket.on('invite:delete', (token: string, ack?: (ok: boolean) => void) => {
+			if (user.id !== session.adminId) return;
+
+			const inv = invites.get(token);
+			const ok = !!inv && inv === session.id && invites.delete(token);
+			ack?.(ok);
 		});
 
 		socket.on('session:delete', () => {

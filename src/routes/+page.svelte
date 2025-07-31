@@ -11,6 +11,7 @@
   import { toast } from "svelte-sonner";
   import UserOverview from "$lib/components/custom/UserOverview.svelte";
     import VerificationPending from "$lib/components/custom/VerificationPending.svelte";
+    import QrDialog from "$lib/components/custom/QRDialog.svelte";
 
   type Phase = "idle" | "pending" | "chat";
 
@@ -24,6 +25,8 @@
   let isAdmin = false;
   let messages: Message[] = [];
   let users: User[] = [];
+
+  let qrDialog: QrDialog;
 
   const WS_PATH = "/api/socket";
   let socket: ReturnType<typeof io> | null = null;
@@ -106,6 +109,11 @@
     });
 
     socket.on("verification:request", (u) => (users = [...users, u]));
+
+    socket.on("user:added", (u) => {
+      users = [...users, u];
+      qrDialog.closeDialog();
+    });
     socket.on(
       "user:updated",
       (u) => (users = users.map((x) => (x.id === u.id ? u : x))),
@@ -164,6 +172,29 @@
     socket?.emit("user:delete", id);
   }
 
+  function inviteUser() {
+    socket?.emit("invite:create", (token: string, url: string) => {
+      if (token && token.length > 0) {
+        qrDialog.openDialog(url, () => {
+          deleteInvite(token);
+        });
+        
+      } else {
+        toast.error("Failed to create invite");
+      }
+    });
+  }
+
+  function deleteInvite(token: string) {
+    socket?.emit("invite:delete", token, (ok: boolean) => {
+      if (ok) {
+        toast.success("Invite deleted");
+      } else {
+        toast.error("Failed to delete invite");
+      }
+    });
+  }
+
   function deleteSession() {
     socket?.emit("session:delete");
   }
@@ -211,8 +242,10 @@
         onAccept={acceptUser}
         onReject={rejectUser}
         onRemove={removeUser}
+        onCreateInvite={inviteUser}
         onDeleteSession={deleteSession}
       />
+      <QrDialog bind:this={qrDialog} />
     {:else}
       <UserOverview
         name={currentUserName}
