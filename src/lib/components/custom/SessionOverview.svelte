@@ -35,7 +35,7 @@
     }: Props = $props();
 </script>
 
-<Card.Root class="md:h-[90vh] flex flex-col gap-4">
+<Card.Root class="lg:h-[85vh] flex flex-col gap-4">
     <Card.Header>
         You are: <br />
         <span class="text-xl font-bold">{name}</span>

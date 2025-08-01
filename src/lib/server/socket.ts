@@ -1,8 +1,9 @@
 import { Server } from 'socket.io';
-import { sessions, users, shares, invites, createNewShare, createNewInvite } from './store.js';
+import { sessions, files, users, invites, createNewShare, createNewInvite } from './store.js';
 import { parseAuthCookie } from './cookies.js';
 import { v4 as uuid } from 'uuid';
-import type { Message, Session, User } from './types.js';
+import type { Message, Session, ShareEntry, User } from './types.js';
+
 import type { Server as HttpServer } from 'http';
 import 'dotenv/config';
 
@@ -63,12 +64,35 @@ export function initSocket(httpServer: HttpServer) {
 			const msg: Message = {
 				id: uuid(),
 				authorId: user.id,
-				text,
+				text: text,
+				kind: "text",
 				createdAt: Date.now()
 			};
 			session.messages.push(msg);
 			io!.to(session.id).emit('messages:added', msg);
 		});
+
+		socket.on(
+			'messages:addMedia',
+			(p: { fileId: string; kind: 'image' | 'video' | 'file'; name: string }, ack?: () => void) => {
+				if (!user.isVerified) return;
+				const meta = files.get(p.fileId);
+				if (!meta || meta.sessionId !== session.id) return;
+
+				const msg: Message = {
+					id: uuid(),
+					authorId: user.id,
+					createdAt: Date.now(),
+					kind: p.kind,
+					url: `/file/${p.fileId}`,
+					name: p.name
+				};
+				session.messages.push(msg);
+				io!.to(session.id).emit('messages:added', msg);
+				ack?.();
+			}
+		);
+
 
 		socket.on('messages:delete', (id: string) => {
 			const idx = session.messages.findIndex(
@@ -81,13 +105,18 @@ export function initSocket(httpServer: HttpServer) {
 			io!.to(session.id).emit('messages:deleted', id);
 		});
 
-		socket.on('share:create', (text: string, ack?: (url: string) => void) => {
+		socket.on('share:create', (id: string, ack?: (url: string) => void) => {
 			if (!user.isVerified) return;
 
-			const code = createNewShare(text);
 
-			const url = `${BASE_URL ?? socket.handshake.headers.origin ?? ''}/s/${code}`;
-			ack?.(url);
+			const msg = session.messages.find((m) => m.id == id);
+
+			if (msg) {
+				const shareEntry: ShareEntry = msg?.kind === 'text' ? { type: "text", text: msg.text! } : { type: "file", fileId: msg.url!.split('/').pop()! }
+				const code = createNewShare(shareEntry);
+				const url = `${BASE_URL ?? socket.handshake.headers.origin ?? ''}/s/${code}`;
+				ack?.(url);
+			}
 		});
 
 		socket.on('verification:respond', ({ userId, accept }: { userId: string; accept: boolean }) => {

@@ -143,15 +143,35 @@
   function addMessage(text: string) {
     socket?.emit("messages:add", text);
   }
+
+  async function upload(file: File) {
+    const form = new FormData();
+    form.append("file", file);
+
+    const res = await fetch("/api/upload", { method: "POST", body: form });
+    if (!res.ok) {
+      toast.error("Upload failed");
+      return;
+    }
+    const { fileId, kind, name } = await res.json();
+
+    // nach erfolgreichem Upload Socket-Event senden
+    socket?.emit("messages:addMedia", { fileId, kind, name }, () => {
+      toast.success("Uploaded");
+    });
+  }
+
   function deleteMessage(id: string) {
     socket?.emit("messages:delete", id);
   }
 
-  function shareMessage(text: string) {
-    socket?.emit("share:create", text , (url: string) => {
+  function shareMessage(msg: Message) {
+    socket?.emit('share:create', msg.id, copy);
+
+    function copy(url: string) {
       navigator.clipboard.writeText(url);
       toast.success("Link copied!");
-    });
+    }
   }
 
   function acceptUser(id: string) {
@@ -200,8 +220,11 @@
 </script>
 
 <svelte:head>
-	<title>YACT</title>
-	<meta name="description" content="YACT (yet another clipboard tool) creates a simple, browser based board to share data between devices in the same session" />
+  <title>YACT</title>
+  <meta
+    name="description"
+    content="YACT (yet another clipboard tool) creates a simple, browser based board to share data between devices in the same session"
+  />
 </svelte:head>
 
 {#if phase === "idle"}
@@ -217,7 +240,7 @@
     <VerificationPending onCancel={resetEverything} />
   </div>
 {:else}
-  <div class="flex flex-col md:flex-row h-full">
+  <div class="flex flex-col lg:flex-row h-full">
     <div class="flex-5/6 overflow-auto p-4">
       <MessagesLayout
         {messages}
@@ -225,6 +248,7 @@
         onCreate={addMessage}
         onDelete={deleteMessage}
         onShare={shareMessage}
+        onUpload={upload}
       />
     </div>
 
