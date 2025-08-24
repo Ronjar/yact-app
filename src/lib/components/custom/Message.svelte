@@ -2,15 +2,18 @@
 	import * as Card from "$lib/components/shadcn/card/index.js";
 	import * as DropdownMenu from "$lib/components/shadcn/dropdown-menu/index.js";
 	import { Button } from "$lib/components/shadcn/button/index.js";
+	import Progress from "../shadcn/progress/progress.svelte";
 	import { toast } from "svelte-sonner";
 	import ShareIcon from "@lucide/svelte/icons/share-2";
 	import FileTextIcon from "@lucide/svelte/icons/file-text";
+	import VideoIcon from "@lucide/svelte/icons/file-video";
+	import ImageIcon from "@lucide/svelte/icons/file-image"
 	import TrashIcon from "@lucide/svelte/icons/trash";
 	import EllipsisVerticalIcon from "@lucide/svelte/icons/ellipsis-vertical";
 	import type { Message } from "$lib/server/types";
-    import { env } from "$env/dynamic/public";
+	import { env } from "$env/dynamic/public";
 
-    const BASE_URL = env.PUBLIC_BASE_URL?? "";
+	const BASE_URL = env.PUBLIC_BASE_URL ?? "";
 
 	let {
 		message,
@@ -26,11 +29,29 @@
 
 	const isSelf = $derived(message.authorId === currentUserId);
 
+	const inProgress = $derived(
+		Boolean((message as any).inProgress) ||
+			(typeof (message as any).progress === "number" &&
+				(message as any).progress < 100),
+	);
+	const percent = $derived(
+		typeof (message as any).progress === "number"
+			? (message as any).progress
+			: inProgress
+				? 0
+				: 100,
+	);
+
 	async function handleCopy() {
 		try {
 			if (message.kind === "text") {
 				await navigator.clipboard.writeText(message.text!);
 				toast.success("Text copied!");
+				return;
+			}
+
+			if (inProgress) {
+				toast.message("Upload in progress…");
 				return;
 			}
 
@@ -42,12 +63,8 @@
 			a.remove();
 			toast.success("Download started");
 			return;
-
-			//const blob = await fetch(message.url!).then(r => r.blob());
-			//await navigator.clipboard.write([ new ClipboardItem({ [blob.type]: blob }) ]);
-			//toast.success('File copied!');
 		} catch {
-			await navigator.clipboard.writeText(BASE_URL + message.url!);
+			await navigator.clipboard.writeText(BASE_URL + (message.url ?? ""));
 			toast.info("Copied link (file-clipboard blocked).");
 		}
 	}
@@ -69,26 +86,19 @@
 >
 	<Card.Content class="w-full">
 		<div class="flex flex-row items-center justify-between">
-			{#if message.kind === "image"}
-				<img
-					src={message.url}
-					alt="img"
-					class="size-10 object-cover rounded"
-				/>
-			{:else if message.kind === "video"}
-				<video
-					src={message.url}
-					class="size-10 object-cover rounded"
-					muted
-				></video>
-			{:else if message.kind === "file"}
-				<div class="flex items-center gap-1">
-					<FileTextIcon class="size-8" /><span
-						class="truncate max-w-[10rem]">{message.name}</span
-					>
-				</div>
+			{#if message.kind === "text"}
+			<span class="truncate">{message.text}</span>
 			{:else}
-				<span class="truncate">{message.text}</span>
+			<div class="flex items-center gap-1">
+				{#if message.kind === "image"}
+					<ImageIcon class="size-8" />
+				{:else if message.kind === "video"}
+					<VideoIcon class="size-8" />
+				{:else if message.kind === "file"}
+					<FileTextIcon class="size-8" />
+				{/if}
+					<span class="truncate max-w-[10rem]">{message.name}</span>
+				</div>
 			{/if}
 
 			{#if isSelf}
@@ -132,5 +142,9 @@
 				</Button>
 			{/if}
 		</div>
+
+		{#if inProgress}
+			<Progress value={percent} class="mt-2 h-2 w-full overflow-hidden" />
+		{/if}
 	</Card.Content>
 </Card.Root>

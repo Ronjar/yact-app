@@ -79,6 +79,18 @@
       phase = "chat";
     });
 
+    socket.on("upload:progress", ({ fileId, percent }) => {
+      messages = messages.map((m) =>
+        ((m as any).uploadId === fileId || m.id === `upl-${fileId}`)
+          ? ({ ...m, progress: percent } as any)
+          : m
+      );
+    });
+
+    socket.on("messages:updated", (updated: any) => {
+      messages = messages.map((m) => (m.id === updated.id ? updated : m));
+    });
+
     socket.on("session:init", () => {});
 
     socket.on("messages:added", (msg: Message) => {

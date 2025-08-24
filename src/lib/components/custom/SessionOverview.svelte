@@ -6,7 +6,6 @@
     import Separator from "../shadcn/separator/separator.svelte";
     import Button from "../shadcn/button/button.svelte";
     import * as Card from "$lib/components/shadcn/card/index.js";
-    import * as Dialog from "$lib/components/shadcn/dialog/index.js";
 
     export interface User {
         id: string;

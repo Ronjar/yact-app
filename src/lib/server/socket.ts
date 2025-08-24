@@ -6,6 +6,7 @@ import type { Message, Session, ShareEntry, User } from './types.js';
 
 import type { Server as HttpServer } from 'http';
 import 'dotenv/config';
+import { bus } from './bus.js';
 
 let io: Server | undefined;
 
@@ -20,6 +21,70 @@ export function initSocket(httpServer: HttpServer) {
 		path: '/api/socket',
 		cors: { origin: '*' }
 	});
+
+	const g = globalThis as any;
+	if (!g.__yactBusWired) {
+		g.__yactBusWired = true;
+
+		bus.on('upload:start', (p: {
+			sessionId: string;
+			authorId: string;
+			fileId: string;
+			kind: 'image'|'video'|'file';
+			name: string;
+		}) => {
+			const session = sessions.get(p.sessionId);
+			if (!session) return;
+
+			const placeholder = {
+				id: `upl-${p.fileId}`,
+				authorId: p.authorId,
+				createdAt: Date.now(),
+				kind: p.kind,
+				name: p.name,
+				uploadId: p.fileId,
+				inProgress: true,
+				progress: 0,
+			} as any as Message;
+
+			const exists = session.messages.some(m => (m as any).uploadId === p.fileId || m.id === `upl-${p.fileId}`);
+			if (!exists) {
+				session.messages.push(placeholder);
+				io!.to(p.sessionId).emit('messages:added', placeholder);
+			}
+		});
+
+		bus.on('upload:progress', (p: { sessionId: string; fileId: string; percent: number }) => {
+			const session = sessions.get(p.sessionId);
+			if (!session) return;
+			const msg = session.messages.find(m => (m as any).uploadId === p.fileId || m.id === `upl-${p.fileId}`);
+			if (msg) (msg as any).progress = p.percent;
+			io!.to(p.sessionId).emit('upload:progress', p);
+		});
+
+		bus.on('upload:finished', (p: {
+			sessionId: string;
+			fileId: string;
+			finalUrl: string;
+			kind: 'image'|'video'|'file';
+			name: string;
+		}) => {
+			const session = sessions.get(p.sessionId);
+			if (!session) return;
+
+			const idx = session.messages.findIndex(m => (m as any).uploadId === p.fileId || m.id === `upl-${p.fileId}`);
+			if (idx !== -1) {
+				const updated = {
+					...(session.messages[idx] as any),
+					url: p.finalUrl,
+					inProgress: false,
+					progress: 100
+				};
+				session.messages[idx] = updated;
+				io!.to(p.sessionId).emit('messages:updated', updated);
+			}
+		});
+	}
 
 	io.on('connection', (socket) => {
 		const cookieHeader = socket.handshake.headers.cookie ?? '';
@@ -79,12 +144,30 @@ export function initSocket(httpServer: HttpServer) {
 				const meta = files.get(p.fileId);
 				if (!meta || meta.sessionId !== session.id) return;
 
+				const finalUrl = `/file/${p.fileId}`;
+				const placeIdx = session.messages.findIndex(m => (m as any).uploadId === p.fileId || m.id === `upl-${p.fileId}`);
+
+				if (placeIdx !== -1) {
+					const updated: any = {
+						...session.messages[placeIdx],
+						kind: p.kind,
+						name: p.name,
+						url: finalUrl,
+						inProgress: false,
+						progress: 100
+					};
+					session.messages[placeIdx] = updated;
+					io!.to(session.id).emit('messages:updated', updated);
+					ack?.();
+					return;
+				}
+
 				const msg: Message = {
 					id: uuid(),
 					authorId: user.id,
 					createdAt: Date.now(),
 					kind: p.kind,
-					url: `/file/${p.fileId}`,
+					url: finalUrl,
 					name: p.name
 				};
 				session.messages.push(msg);
