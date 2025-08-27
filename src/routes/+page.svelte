@@ -12,19 +12,22 @@
   import UserOverview from "$lib/components/custom/UserOverview.svelte";
   import VerificationPending from "$lib/components/custom/VerificationPending.svelte";
   import QrDialog from "$lib/components/custom/QRDialog.svelte";
+    import AttemptingReconnection from "$lib/components/custom/AttemptingReconnection.svelte";
+    import type { PageProps, PageServerData } from "./$types";
 
-  type Phase = "idle" | "pending" | "chat";
+  type Phase = "idle" | "pending" | "reconnect" | "chat";
 
-  export let data: { autoResume: { userId: string; sessionId: string } | null };
+
+  let { data }: PageServerData = $props();
 
   let joinOrCreate: JoinOrCreate;
-  let phase: Phase = "idle";
+  let phase: Phase = $state("idle");
   let sessionCode = "";
-  let currentUserId = data.autoResume?.userId ?? "";
-  let currentUserName = "";
-  let isAdmin = false;
-  let messages: Message[] = [];
-  let users: User[] = [];
+  let currentUserId = $state(data.autoResume?.userId ?? "");
+  let currentUserName = $state("");
+  let isAdmin = $state(false);
+  let messages: Message[] = $state([]);
+  let users: User[] = $state([]);
 
   let qrDialog: QrDialog;
 
@@ -33,7 +36,6 @@
 
   async function createSession() {
     const res = await fetch("/api/session/create", { method: "POST" });
-    if (!res.ok) return toast.error("Cannot create session");
     if (res.ok) {
       connectSocket();
     } else {
@@ -139,6 +141,18 @@
       resetEverything();
     });
 
+    socket.on("error:userNotFound", () => {
+      toast.error("Your user was not found. Try rejoining the session.");
+      resetEverything();
+      phase = "idle";
+    });
+
+    socket.on("error:sessionNotFound", () => {
+      toast.error("Session was not found. Please create a new one.");
+      resetEverything();
+      phase = "idle";
+    });
+
     socket.on("disconnect", () => {});
   }
 
@@ -167,7 +181,6 @@
     }
     const { fileId, kind, name } = await res.json();
 
-    // nach erfolgreichem Upload Socket-Event senden
     socket?.emit("messages:addMedia", { fileId, kind, name }, () => {
       toast.success("Uploaded");
     });
@@ -223,8 +236,11 @@
   }
 
   onMount(() => {
+    console.log("Mounted");
+    console.log(data.autoResume);
     if (data.autoResume) {
-      phase = "pending";
+      console.log("Auto resuming session");
+      phase = "reconnect";
       connectSocket();
     }
     return () => socket?.disconnect();
@@ -250,6 +266,10 @@
 {:else if phase === "pending"}
   <div class="mt-40 md:mt-72 flex items-center justify-center">
     <VerificationPending onCancel={resetEverything} />
+  </div>
+{:else if phase === "reconnect"}
+  <div class="mt-40 md:mt-72 flex items-center justify-center">
+    <AttemptingReconnection onCancel={resetEverything} />
   </div>
 {:else}
   <div class="flex flex-col lg:flex-row h-full">

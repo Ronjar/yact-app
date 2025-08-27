@@ -94,9 +94,18 @@ export function initSocket(httpServer: HttpServer) {
 		if (!auth) return socket.disconnect();
 
 		const user = users.get(auth.userId);
-		if (!user || user.sessionId !== auth.sessionId) return socket.disconnect();
+		if(!user) {
+			socket.emit('error:userNotFound');
+			return socket.disconnect();
+		}
+		if (user.sessionId !== auth.sessionId) return socket.disconnect();
 
 		const session = sessions.get(user.sessionId)!;
+
+		if (!session ) {
+			socket.emit('error:sessionNotFound');
+			return socket.disconnect();
+		}
 
 		if (user.socketId === "From invite") {
 			const admin = users.get(session.adminId);
