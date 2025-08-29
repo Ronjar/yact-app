@@ -11,9 +11,12 @@
 	import { version } from "$app/environment";
 	import * as Dialog from "$lib/components/shadcn/dialog/index.js";
 	import Separator from "$lib/components/shadcn/separator/separator.svelte";
+	import { env } from "$env/dynamic/public";
 
 	let code: string | undefined = $state();
 	sessionMeta.subscribe(({ code: c }) => (code = c));
+
+	let hideWatermark = env.PUBLIC_HIDE_WATERMARK?.toLowerCase() === "true";
 
 	let aboutDialog = $state(false);
 
@@ -71,16 +74,22 @@
 
 	<footer class="w-full text-end">
 		<p class="text-sm opacity-50 pr-2">
-			<Button
-				variant="link"
-				class="p-0 underline cursor-pointer"
-				onclick={() => {
-					aboutDialog = true;
-				}}>YACT v{version}</Button
-			> |
-			<a class="hover:underline" href="https://github.com/Ronjar/yact-app"
-				>GitHub</a
-			>
+			{#if hideWatermark}
+					<!-- svelte-ignore node_invalid_placement_ssr -->
+							<a
+					href="https://github.com/Ronjar/yact-app/ossLicenses.txt"
+					> <p class="py-2">Licenses</p></a
+				>
+			{:else}
+				<Button
+					variant="link"
+					class="p-0 m-0 underline cursor-pointer font-normal"
+					onclick={() => {
+						aboutDialog = true;
+					}}>YACT v{version}</Button
+				> |
+				<a href="https://github.com/Ronjar/yact-app">GitHub</a>
+			{/if}
 		</p>
 	</footer>
 
