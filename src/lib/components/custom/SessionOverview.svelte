@@ -34,7 +34,7 @@
     }: Props = $props();
 </script>
 
-<Card.Root class="lg:h-[85vh] flex flex-col gap-4">
+<Card.Root class="lg:h-full flex flex-col gap-4">
     <Card.Header>
         You are: <br />
         <span class="text-xl font-bold">{name}</span>
@@ -43,7 +43,7 @@
         <Separator />
         <h2 class="text-md font-bold mt-4 mb-2">Users:</h2>
 
-        <div class="flex flex-col justify-between h-full">
+        <div class="flex flex-col justify-between overflow-scroll">
             <div>
                 {#each users as u (u.id)}
                     {#if u.name !== name}

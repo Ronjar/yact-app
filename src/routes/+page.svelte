@@ -171,6 +171,7 @@
   }
 
   async function upload(file: File) {
+    toast.success("Uploading file");
     const form = new FormData();
     form.append("file", file);
 
@@ -182,7 +183,7 @@
     const { fileId, kind, name } = await res.json();
 
     socket?.emit("messages:addMedia", { fileId, kind, name }, () => {
-      toast.success("Uploaded");
+      toast.success("File uploaded");
     });
   }
 
@@ -273,7 +274,7 @@
   </div>
 {:else}
   <div class="flex flex-col lg:flex-row h-full">
-    <div class="flex-5/6 overflow-auto p-4">
+    <div class="flex-5/6 lg:overflow-scroll p-4 grow">
       <MessagesLayout
         {messages}
         {currentUserId}
@@ -284,7 +285,7 @@
       />
     </div>
 
-    <div class="flex-1/6 p-4">
+    <div class="flex-1/6 p-4 grow">
       {#if isAdmin}
         <SessionOverview
           name={currentUserName}
