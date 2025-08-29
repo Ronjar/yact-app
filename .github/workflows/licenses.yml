@@ -1,41 +1,41 @@
-name: Check OSS Licenses
+name: Update OSS Licenses
 
 on:
   push:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
-  check-licenses:
+  update-oss-licenses:
+    if: github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip ci]')
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Use Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-
-      # Falls dein Projekt Dependencies hat, installiere sie.
-      # Wenn du kein npm-Setup hast, kannst du diesen Schritt auch entfernen.
-      - name: Install deps (optional)
+      - name: Install dependencies
         run: |
           if [ -f package-lock.json ]; then
             npm ci
           elif [ -f package.json ]; then
             npm install --no-fund --no-audit
           fi
-
       - name: Generate ossLicenses.txt
+        run: npx --yes license-checker-rseidelsohn --plainVertical --out ./ossLicenses.txt
+      - name: Commit changes
         run: |
-          npx --yes license-checker-rseidelsohn --plainVertical --out ./ossLicenses.txt
-
-      - name: Fail if ossLicenses.txt changed
-        run: |
-          if ! git diff --exit-code -- ossLicenses.txt; then
-            echo "::error ::ossLicenses.txt ist nicht aktuell. Bitte lokal generieren und mitcommitten:"
-            echo "  npx license-checker-rseidelsohn --plainVertical --out ./ossLicenses.txt"
-            exit 1
+          if git diff --quiet -- ossLicenses.txt; then
+            echo "No changes"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add ossLicenses.txt
+            git commit -m "chore: update ossLicenses.txt [skip ci]"
+            git push
           fi
