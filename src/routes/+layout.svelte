@@ -77,7 +77,7 @@
 			{#if hideWatermark}
 					<!-- svelte-ignore node_invalid_placement_ssr -->
 							<a
-					href="https://github.com/Ronjar/yact-app/ossLicenses.txt"
+					href="https://github.com/Ronjar/yact-app/blob/main/ossLicenses.txt" target="_blank"
 					> <p class="py-2">Licenses</p></a
 				>
 			{:else}
@@ -112,7 +112,7 @@
 					This project would not be possible without many open source projects.
 					A big thank you to all the creators of these projects. The Licenses
 					of those projects can be viewed here:<br />
-					<a href="https://github.com/Ronjar/yact-app/ossLicenses.txt"
+					<a href="https://github.com/Ronjar/yact-app/blob/main/ossLicenses.txt" target="_blank"
 						>LICENSES</a
 					>
 				</Dialog.Description>
