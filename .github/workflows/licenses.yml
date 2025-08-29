@@ -1,0 +1,41 @@
+name: Check OSS Licenses
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  check-licenses:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # Falls dein Projekt Dependencies hat, installiere sie.
+      # Wenn du kein npm-Setup hast, kannst du diesen Schritt auch entfernen.
+      - name: Install deps (optional)
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          elif [ -f package.json ]; then
+            npm install --no-fund --no-audit
+          fi
+
+      - name: Generate ossLicenses.txt
+        run: |
+          npx --yes license-checker-rseidelsohn --plainVertical --out ./ossLicenses.txt
+
+      - name: Fail if ossLicenses.txt changed
+        run: |
+          if ! git diff --exit-code -- ossLicenses.txt; then
+            echo "::error ::ossLicenses.txt ist nicht aktuell. Bitte lokal generieren und mitcommitten:"
+            echo "  npx license-checker-rseidelsohn --plainVertical --out ./ossLicenses.txt"
+            exit 1
+          fi
